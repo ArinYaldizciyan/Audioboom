@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Audioboom 🎧
 
-## Getting Started
+Audioboom is a modern web application for discovering, downloading, and managing audiobooks. Built with Next.js and featuring a beautiful UI powered by shadcn/ui components, it provides a seamless experience for audiobook enthusiasts.
 
-First, run the development server:
+## Features
+
+- 📚 Search for audiobooks using OpenLibrary integration
+- 🔍 Real-time search results with book metadata
+- ⬇️ Download management with progress tracking
+- 🔎 Filter and search through your downloads
+- 🎨 Modern, responsive UI with dark mode support
+- 🚀 Real-time updates for download progress
+- 🔒 Simple password protection for your personal instance
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **UI Components**: shadcn/ui, Tailwind CSS
+- **State Management**: SWR for data fetching and caching
+- **Database**: PostgreSQL with Prisma ORM
+- **Development**: Docker for containerization
+- **API Integration**: OpenLibrary API, Real-Debrid, Jackett
+
+## Prerequisites
+
+- Docker and Docker Compose
+- Node.js 20.10 or later
+- npm or yarn package manager
+- Real-Debrid account
+- Jackett server setup
+
+## Installation
+
+1. Clone the repository:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd audioboom
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create a `.env` file in the root directory with the following variables:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+# Database
+POSTGRES_USER=your_user
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=audioboom
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Add any other required environment variables
+```
 
-## Learn More
+3. Create a `.env.local` file for API configurations:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+# Real-Debrid API
+REALDEBRID_API_KEY=your_realdebrid_api_key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Jackett Configuration
+JACKETT_API_KEY=your_jackett_api_key
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Security Configuration
+ADMIN_PASSWORD=your_chosen_password  # Password required to access the application
+```
 
-## Deploy on Vercel
+## Security
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Audioboom uses a simple but effective security model for personal use:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Password Protection**: A single admin password protects access to the entire application
+- **Cookie-based Auth**: Successful login creates a secure HTTP-only cookie
+- **Production Security**:
+  - Secure cookies enabled in production
+  - Strict same-site policy
+  - 1-week session duration
+
+This security model is designed for personal use where you're hosting the application for yourself or a small trusted group. It's simple to set up and maintain while providing basic protection against unauthorized access.
+
+## API Configuration Guide
+
+### Real-Debrid Setup
+
+1. Sign up for a Real-Debrid account at [real-debrid.com](https://real-debrid.com)
+2. Generate an API key from your account settings
+3. Add the API key to your `.env.local` file
+
+### Jackett Setup
+
+1. Install and configure Jackett on your system
+2. Add your preferred torrent indexers
+3. Copy your API key from Jackett
+4. Add the API key to your `.env.local` file
+
+The base URLs and endpoints are configured in `src/config/api.ts`. You can modify these values based on your setup:
+
+```typescript
+export const API_CONFIG = {
+  REALDEBRID: {
+    BASE_URL: "https://api.real-debrid.com/rest/1.0",
+    // ... other Real-Debrid config
+  },
+  JACKETT: {
+    BASE_URL: "http://127.0.0.1:9117", // Update this to match your Jackett installation
+    // ... other Jackett config
+  },
+};
+```
+
+## Development Scripts
+
+- `npm run dev` - Start the Next.js development server
+- `npm run build` - Build the production application
+- `npm run start` - Start the production server
+- `npm run migrate-dev` - Run Prisma migrations in development
+- `npm run migrate-prod` - Run Prisma migrations in production
+- `npm run docker:compose:dev` - Start development environment with Docker
+- `npm run docker:compose:prod` - Start production environment with Docker
+
+## Database Management
+
+Prisma Studio is available at `http://localhost:5555` for database management when running in development mode.
+
+## Production Deployment
+
+To deploy the application in production:
+
+1. Build the Docker containers:
+
+```bash
+npm run docker:compose:prod
+```
+
+2. The application will be available on port 3000 by default.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+[Add your license here]

@@ -1,0 +1,85 @@
+# Comments are provided throughout this file to help you get started.
+# If you need more help, visit the Docker Compose reference guide at
+# https://docs.docker.com/go/compose-spec-reference/
+
+# Here the instructions define your application as a service called "server".
+# This service is built from the Dockerfile in the current directory.
+# You can add other services your application may depend on here, such as a
+# database or a cache. For examples, see the Awesome Compose repository:
+# https://github.com/docker/awesome-compose
+services:
+  app:
+    container_name: app
+    restart: always
+    build:
+      context: .
+      target: dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - app-files:/app/storage
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      - WATCHPACK_POLLING=true
+    ports:
+      - 3000:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      npm run docker:dev
+    env_file: .env
+    networks:
+      - prisma-network
+
+  db:
+    container_name: db
+    image: postgres:latest
+    restart: always
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    env_file: .env
+    # environment:
+    #   - HOST_NAME=db
+    #     #Do not change
+    #   - PGUSER=${PGUSER}
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prisma-network
+  
+  prisma-studio:
+    container_name: prisma-studio
+    image: node:lts-alpine3.17
+    working_dir: /usr/src/app
+    volumes:
+      - .:/usr/src/app
+    command: npx prisma studio --port 5555 --browser none
+    ports:
+      - "5555:5555"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    networks:
+      - prisma-network
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
+
+networks: 
+  prisma-network:
+    name: prisma-network
+
+volumes:
+  db-data:
+  app-files:
