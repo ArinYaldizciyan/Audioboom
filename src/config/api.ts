@@ -9,9 +9,10 @@ export const API_CONFIG = {
     },
   },
   JACKETT: {
-    BASE_URL: "https://arinyaldizciyan-jackett.elfhosted.com",
+    getBaseUrl: () => process.env.JACKETT_BASE_URL,
     ENDPOINTS: {
-      TORZNAB: "/api/v2.0/indexers/all/results/torznab/api",
+      ALL_INDEXERS: "/api/v2.0/indexers/all/results/torznab/api",
+      SEARCH_INDEXER: "/api/v2.0/indexers/{indexerId}/results/torznab/api",
     },
     CATEGORIES: {
       AUDIOBOOK: "3030", // Standard category code for audiobooks

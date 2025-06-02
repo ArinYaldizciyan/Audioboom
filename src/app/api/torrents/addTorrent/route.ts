@@ -22,24 +22,37 @@ export async function POST(req: NextRequest) {
     return new NextResponse("No link provided", { status: 400 });
   }
 
+  //TODO: Handle case where link is IMMEDIATELY a magnet link. Where no redirect is needed.
   try {
-    const response = await fetch(link, {
-      redirect: "manual",
-    });
     let torrent_id = "";
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      console.log(location);
-      if (location?.startsWith("magnet:")) {
-        const magnet = location;
-        torrent_id = await add_magnet(magnet);
+
+    // Check if the link is already a magnet link
+    if (link.startsWith("magnet:")) {
+      console.log("Direct magnet link detected");
+      torrent_id = await add_magnet(link);
+    } else {
+      // Handle HTTP/HTTPS links that might redirect to magnets or torrent files
+      const response = await fetch(link, {
+        redirect: "manual",
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        console.log(location);
+        if (location?.startsWith("magnet:")) {
+          const magnet = location;
+          torrent_id = await add_magnet(magnet);
+        } else {
+          const torrent_file = await download_torrent_file(link);
+          torrent_id = await add_torrent(torrent_file);
+        }
       } else {
+        console.log("NOT REDIRECT");
+        console.log(response);
+        // Direct torrent file download
         const torrent_file = await download_torrent_file(link);
         torrent_id = await add_torrent(torrent_file);
       }
-    } else {
-      console.log("NOT REDIRECT");
-      console.log(response);
     }
     await select_torrent_files(torrent_id);
     const torrent_info = await get_torrent_info(torrent_id);

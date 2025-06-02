@@ -1,15 +1,18 @@
 // pages/api/search.ts
 import { NextRequest, NextResponse } from "next/server";
-import { Torznab } from "@/services/TorznabService/Torznab";
-import axios from "axios";
-import { API_CONFIG } from "@/config/api";
-
-const { BASE_URL, ENDPOINTS, CATEGORIES } = API_CONFIG.JACKETT;
+import {
+  getIndexers,
+  searchAudiobooks,
+  flattenAndSortResults,
+} from "@/services/JackettService/Jackett";
 
 export async function GET(req: NextRequest) {
   // 1. Get the search query from the request
-  const query = req.nextUrl.searchParams.get("q"); // example: ?q=ubuntu
-  console.log(query);
+  const query = req.nextUrl.searchParams.get("q");
+  const maxResults = parseInt(req.nextUrl.searchParams.get("limit") || "20");
+
+  console.log("Search query:", query);
+
   if (!query) {
     return NextResponse.json(
       {
@@ -21,58 +24,71 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // 2. Check for API key configuration
-  const apiKey = process.env.JACKETT_API_KEY;
-  console.log("API Key:", apiKey); // Debug log
-  if (!apiKey || apiKey.trim() === "") {
-    console.error("JACKETT_API_KEY is not configured");
+  try {
+    // 2. Get all available indexers
+    const indexers = await getIndexers();
+
+    if (indexers.length === 0) {
+      return NextResponse.json(
+        {
+          error: "No indexers available",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    // 3. Search all indexers for audiobooks
+    const searchResults = await searchAudiobooks(indexers, query);
+
+    // 4. Flatten and sort results by seeder count
+    const sortedResults = flattenAndSortResults(searchResults, maxResults);
+
+    // 5. Return results with metadata
     return NextResponse.json(
       {
-        error: "JACKETT_API_KEY is not configured in environment variables",
+        query,
+        totalIndexersSearched: searchResults.size,
+        totalResults: sortedResults.length,
+        maxResults,
+        results: sortedResults,
       },
       {
-        status: 500,
+        status: 200,
       }
     );
-  }
-
-  //Append &t=search and &q=<SEARCH_TERM> to the base Torznab URL
-  const fullUrl = `${BASE_URL}${
-    ENDPOINTS.TORZNAB
-  }?apikey=${apiKey}&t=search&cat=${
-    CATEGORIES.AUDIOBOOK
-  }&q=${encodeURIComponent(String(query))}`;
-
-  try {
-    // 4. Fetch XML data from Jackett
-    const { data: xmlData } = await axios.get(fullUrl);
-    const results = await Torznab(xmlData);
-    if (results) {
-      return NextResponse.json(
-        {
-          results,
-        },
-        {
-          status: 200,
-        }
-      );
-    }
   } catch (error) {
-    console.error("Error fetching Jackett data:", error);
-    // Check if it's an axios error with a response
-    if (axios.isAxiosError(error) && error.response) {
-      return NextResponse.json(
-        {
-          error: `Jackett API Error: ${error.response.status} - ${error.response.statusText}`,
-        },
-        {
-          status: error.response.status,
-        }
-      );
+    console.error("Error searching for audiobooks:", error);
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes("JACKETT_API_KEY")) {
+        return NextResponse.json(
+          {
+            error: "Jackett API key not configured",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
+
+      if (error.message.includes("base URL")) {
+        return NextResponse.json(
+          {
+            error: "Jackett base URL not configured",
+          },
+          {
+            status: 500,
+          }
+        );
+      }
     }
+
     return NextResponse.json(
       {
-        error: "Failed to fetch data from Jackett",
+        error: "Failed to search for audiobooks",
       },
       {
         status: 500,
