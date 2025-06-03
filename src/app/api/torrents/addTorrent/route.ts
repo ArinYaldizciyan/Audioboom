@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
         status: 200,
       }
     );
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Error adding torrent:", err);
     return NextResponse.json(
       { error: "Failed to add torrent" },

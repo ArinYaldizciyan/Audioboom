@@ -1,10 +1,10 @@
 import { useRef, useEffect, useMemo } from "react";
-import { debounce } from "lodash";
+import { debounce, DebouncedFunc } from "lodash";
 
-export function useDebounce<T extends (...args: any[]) => void>(
-  fn: T,
+export function useDebounce<Args extends readonly unknown[]>(
+  fn: (...args: Args) => void,
   delay: number = 200
-): (...args: Parameters<T>) => void {
+): DebouncedFunc<(...args: Args) => void> {
   const fnRef = useRef(fn);
 
   useEffect(() => {
@@ -13,7 +13,7 @@ export function useDebounce<T extends (...args: any[]) => void>(
 
   const debounced = useMemo(
     () =>
-      debounce((...args: Parameters<T>) => {
+      debounce((...args: Args) => {
         fnRef.current(...args);
       }, delay),
     [delay]

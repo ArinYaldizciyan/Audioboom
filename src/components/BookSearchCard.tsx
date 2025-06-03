@@ -47,6 +47,25 @@ interface BookSearchCardProps {
   handleSearch: (details: BookSearchDetails) => void;
 }
 
+interface OpenLibraryDoc {
+  title: string;
+  author_key: string[];
+  author_name: string[];
+  cover_edition_key: string;
+  cover_i: number;
+}
+
+interface OpenLibrarySearchResponse {
+  docs: OpenLibraryDoc[];
+  documentation_url: string;
+  numFound: number;
+  numFoundExact: boolean;
+  num_found: number;
+  offset: number;
+  q: string;
+  start: number;
+}
+
 //TODO: Add abort controller to the fetch request, so new autocompletes cancel previous ones
 export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
   const searchParams = useSearchParams();
@@ -56,8 +75,8 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
   const [value, setValue] = useState(search);
   const controllerRef = useRef<AbortController | null>(null);
 
-  const parseAutocomplete = (json: any) => {
-    return json.docs.map((item: any) => ({
+  const parseAutocomplete = (json: OpenLibrarySearchResponse) => {
+    return json.docs.map((item: OpenLibraryDoc) => ({
       title: item.title,
       author: item.author_name[0],
       cover_edition_key: item.cover_edition_key,
@@ -85,8 +104,14 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
       const data = await resp.json();
       const bookInfo = parseAutocomplete(data);
       setAutocomplete(bookInfo);
-    } catch (err: any) {
-      setError(err.message || "Unknown error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === "AbortError") {
+        return;
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Unknown error occurred");
+      }
     }
   };
 
@@ -94,7 +119,7 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
 
   return (
     <Command
-      className="rounded-lg border shadow-md text-base"
+      className="rounded-lg border shadow-md text-base mb-4"
       shouldFilter={false}
     >
       <CommandInput

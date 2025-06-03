@@ -4,14 +4,28 @@ import useSWRMutation from "swr/mutation";
 import BookSearchCard, { BookSearchDetails } from "../BookSearchCard";
 import SearchResults from "../SearchResults";
 import { redirect } from "next/navigation";
+import { TorznabResults } from "@/services/TorznabService/Torznab";
 
-async function searchFetcher(url: string, { arg }: { arg: string }) {
+interface SearchResponse {
+  query: string;
+  totalIndexersSearched: number;
+  totalResults: number;
+  maxResults: number;
+  results: TorznabResults[];
+}
+
+async function searchFetcher(
+  url: string,
+  { arg }: { arg: string }
+): Promise<TorznabResults[]> {
   const response = await fetch(`${url}?q=${encodeURIComponent(arg)}`);
   if (!response.ok) {
     throw new Error("Search Failed" + response.status);
   }
 
-  return await response.json().then((data: any) => data.results);
+  const data: SearchResponse = await response.json();
+
+  return data.results;
 }
 
 async function add_torrent_fetcher(
@@ -39,7 +53,10 @@ export function SearchPage() {
     data: indexerData,
     error: indexerError,
     isMutating: indexerIsLoading,
-  } = useSWRMutation<[], Error, string, string>("/api/search", searchFetcher);
+  } = useSWRMutation<TorznabResults[], Error, string, string>(
+    "/api/search",
+    searchFetcher
+  );
 
   const {
     trigger: addTorrentTrigger,
@@ -68,8 +85,12 @@ export function SearchPage() {
         setCoverEditionKey(details.cover_edition_key);
       }
       await indexerTrigger(details.search);
-    } catch (err: any) {
-      console.log(err.message || "Unknown error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.log(err.message || "Unknown error occurred");
+      } else {
+        console.log("Unknown error occurred");
+      }
     }
   }
 
