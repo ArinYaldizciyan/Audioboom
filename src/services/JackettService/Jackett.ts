@@ -127,7 +127,10 @@ export async function searchAudiobooks(
   // Find audiobook categories for each indexer
   const searchPromises = indexers.map(async (indexer) => {
     //TODO: Consider that some categories are "Audio Book and others are audiobook"
-    const audiobookCategories = findCategoriesByName(indexer, "audiobook");
+    const audiobookCategories = findCategoriesByName(indexer, [
+      "audiobook",
+      "audio book",
+    ]);
     console.log(audiobookCategories);
     if (audiobookCategories.length > 0) {
       try {
@@ -151,13 +154,15 @@ export async function searchAudiobooks(
 
 function findCategoriesByName(
   indexer: TorznabIndexer,
-  searchTerm: string
+  searchTerms: string[]
 ): number[] {
   const results: number[] = [];
-  const term = searchTerm.toLowerCase();
+  const terms = searchTerms.map((term) => term.toLowerCase());
 
   indexer.categories.forEach((name, id) => {
-    if (name.toLowerCase().includes(term)) {
+    const categoryName = name.toLowerCase();
+    // Check if the category name includes any of the search terms
+    if (terms.some((term) => categoryName.includes(term))) {
       results.push(id);
     }
   });

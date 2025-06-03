@@ -47,12 +47,14 @@ interface BookSearchCardProps {
   handleSearch: (details: BookSearchDetails) => void;
 }
 
+//TODO: Add abort controller to the fetch request, so new autocompletes cancel previous ones
 export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
   const searchParams = useSearchParams();
   const [autocomplete, setAutocomplete] = useState<BookInfo[]>([]);
   const [error, setError] = useState("");
   const search = searchParams.get("q") || "";
   const [value, setValue] = useState(search);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const parseAutocomplete = (json: any) => {
     return json.docs.map((item: any) => ({
@@ -64,12 +66,15 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
 
   const handleAutocomplete = async (searchValue: string) => {
     setError("");
-
+    controllerRef.current?.abort();
+    controllerRef.current = new AbortController();
     try {
+      const signal = controllerRef.current.signal;
       const resp = await fetch(
         `https://openlibrary.org/search.json?limit=10&q=${encodeURIComponent(
           searchValue
-        )}`
+        )}`,
+        { signal }
       );
       if (!resp.ok) {
         const errData = await resp.json();
@@ -85,7 +90,7 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
     }
   };
 
-  const debouncedAutocomplete = useDebounce(handleAutocomplete);
+  const debouncedAutocomplete = useDebounce(handleAutocomplete, 200);
 
   return (
     <Command
@@ -96,7 +101,7 @@ export default function BookSearchCard({ handleSearch }: BookSearchCardProps) {
         value={value}
         onValueChange={(newValue) => {
           setValue(newValue);
-          handleAutocomplete(newValue);
+          debouncedAutocomplete(newValue);
         }}
         placeholder="Search thousands of books..."
       />

@@ -58,7 +58,7 @@ export default function DownloadsPage() {
     if (error.message === "Unauthorized") {
       return null; // Don't show any error as we're redirecting
     }
-    return <div>Error loading downloads</div>;
+    //return <div>Error loading downloads</div>;
   }
 
   if (isLoading) {

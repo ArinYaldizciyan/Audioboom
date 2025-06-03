@@ -1,20 +1,44 @@
 import { useRef, useEffect, useMemo } from "react";
 import { debounce } from "lodash";
 
-export const useDebounce = (callback: () => void) => {
-  const ref = useRef<any>("");
+export function useDebounce<T extends (...args: any[]) => void>(
+  fn: T,
+  delay: number = 200
+): (...args: Parameters<T>) => void {
+  const fnRef = useRef(fn);
 
   useEffect(() => {
-    ref.current = callback;
-  }, [callback]);
+    fnRef.current = fn;
+  }, [fn]);
 
-  const debouncedCallback = useMemo(() => {
-    const func = () => {
-      ref.current?.();
-    };
+  const debounced = useMemo(
+    () =>
+      debounce((...args: Parameters<T>) => {
+        fnRef.current(...args);
+      }, delay),
+    [delay]
+  );
 
-    return debounce(func, 200);
-  }, []);
+  // clean up on unmount
+  useEffect(() => () => debounced.cancel(), [debounced]);
 
-  return debouncedCallback;
-};
+  return debounced;
+}
+
+// export const useDebounce = (callback: () => void) => {
+//   const ref = useRef<any>("");
+
+//   useEffect(() => {
+//     ref.current = callback;
+//   }, [callback]);
+
+//   const debouncedCallback = useMemo(() => {
+//     const func = () => {
+//       ref.current?.();
+//     };
+
+//     return debounce(func, 200);
+//   }, []);
+
+//   return debouncedCallback;
+// };
